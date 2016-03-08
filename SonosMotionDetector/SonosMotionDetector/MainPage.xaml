@@ -1,0 +1,21 @@
+﻿<Page
+    x:Class="SonosMotionDetector.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SonosMotionDetector"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBox x:Name="IndicationStatus" Text="Not started" Margin="10" IsReadOnly="True"/>
+            <Button x:Name="StartButton" IsEnabled="False" Content="Start"  Margin="10" HorizontalAlignment="Center" Click="StartButton_Click"/>
+            <Button x:Name="StopButton" IsEnabled="False" Content="Stop"  Margin="10" HorizontalAlignment="Center" Click="StopButton_Click"/>
+            <TextBlock HorizontalAlignment="Center" Margin="5">Idle time in seconds before "Pause" player</TextBlock>
+            <TextBox Name="IdleTimeSettings" Width="100" InputScope="Number" Text="30" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" LostFocus="IdleTimeSettings_LostFocus"/>
+            <Button x:Name="ListPlayers" Content="List all Sonos Player"  Margin="10" HorizontalAlignment="Center" Click="ListPlayers_Click"/>
+            <ListBox x:Name="DevicesList" Height="200" Width="500" SelectionChanged="DevicesList_SelectionChanged"/>
+        </StackPanel>
+    </Grid>
+</Page>
