@@ -1,2 +1,2 @@
 # WindowsIoTCore-Sonos-MotionSensor
-Start playing SONOS players when a motion detector sends a signal
+Start playing a SONOS player when a motion detector sends a signal
