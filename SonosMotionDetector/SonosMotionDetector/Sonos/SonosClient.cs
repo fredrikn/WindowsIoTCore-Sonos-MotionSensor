@@ -11,21 +11,56 @@ namespace SonosMotionDetector.Sonos
     {
         public static async Task PlayAsync(string ipAddress)
         {
-            await SonosClient.SendAction(
-                            ipAddress,
-                            Endpoints.Control.AvTransport,
-                            "AVTransport",
-                            "Play",
-                            SoapActionVariables.Play);
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             "AVTransport",
+                             "Play",
+                             SoapActionVariables.Play);
+        }
+
+
+        public static async Task PauseAsync(string ipAddress)
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             "AVTransport",
+                             "Pause",
+                             SoapActionVariables.Pause);
+        }
+
+
+        public static async Task<int> GetVolumeAsync(string ipAddress)
+        {
+            var response = await SendAction(
+                                            ipAddress,
+                                            Endpoints.Control.RenderingControl,
+                                            "RenderingControl",
+                                            "GetVolume",
+                                            SoapActionVariables.GetVolume);
+
+            return int.Parse(response["CurrentVolume"].InnerText);
+        }
+
+
+        public static async Task SetVolumeAsync(string ipAddress, int volume)
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.RenderingControl,
+                             "RenderingControl",
+                             "SetVolume",
+                             SoapActionVariables.SetVolume(volume));
         }
 
 
         public static async Task<XmlNode> SendAction(
-                                                        string ipAddress,
-                                                        string path,
-                                                        string service,
-                                                        string action,
-                                                        string variables)
+                                                     string ipAddress,
+                                                     string path,
+                                                     string service,
+                                                     string action,
+                                                     string variables)
         {
             string xml =
                  $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:{action} xmlns:u =\"urn:schemas-upnp-org:service:{service}:1\">{variables}</u:{action}>/s:Body></s:Envelope>";

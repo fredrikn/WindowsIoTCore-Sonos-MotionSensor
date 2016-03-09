@@ -23,19 +23,19 @@ namespace SonosMotionDetector.Network
             using (var socket = new DatagramSocket())
             {
                 socket.MessageReceived += (sender, e) =>
-                {
-                    var reader = e.GetDataReader();
-                    var receivedString = reader.ReadString(reader.UnconsumedBufferLength);
+                                          {
+                                              var reader = e.GetDataReader();
+                                              var receivedString = reader.ReadString(reader.UnconsumedBufferLength);
 
-                    if (string.IsNullOrWhiteSpace(receivedString))
-                        return;
+                                              if (string.IsNullOrWhiteSpace(receivedString))
+                                                  return;
 
-                    if (!discoveredBridges.Exists((device) => device.Data.Equals(receivedString)))
-                    {
-                        discoveredBridges.Add(CreateNetworkService(receivedString, e.RemoteAddress.RawName));
-                        bridgeWasFound = true;
-                    }
-                };
+                                              if (!discoveredBridges.Exists((device) => device.Data.Equals(receivedString)))
+                                              {
+                                                  discoveredBridges.Add(CreateNetworkService(receivedString, e.RemoteAddress.RawName));
+                                                  bridgeWasFound = true;
+                                              }
+                                          };
 
                 await socket.BindEndpointAsync(null, string.Empty);
                 socket.JoinMulticastGroup(multicastIP);

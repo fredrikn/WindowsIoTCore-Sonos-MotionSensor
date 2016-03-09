@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace SonosMotionDetector.Sonos
 {
@@ -30,16 +31,7 @@ namespace SonosMotionDetector.Sonos
             await SonosClient.PlayAsync(IpAddress);
 
             if (fadeMusic)
-            {
-                await GetVolumeAsync();
-
-                //Volume is 0-100. Fade into 50. TODO: Make this configured
-                for (int i = 0; i < 50; i++)
-                {
-                    await SetVolumeAsync(i);
-                    await Task.Delay(100);
-                }
-            }
+                await FadeVolumeUpAsync();
 
             IsPlaying = true;
         }
@@ -47,12 +39,10 @@ namespace SonosMotionDetector.Sonos
 
         public async Task SetVolumeAsync(int volume)
         {
-            await SonosClient.SendAction(
-                                        IpAddress,
-                                        Endpoints.Control.RenderingControl,
-                                        "RenderingControl",
-                                        "SetVolume",
-                                        SoapActionVariables.SetVolume(volume));
+            if (volume < 0 || volume > 100)
+                throw new IndexOutOfRangeException("The volume must be between 0 or 100.");
+
+            await SonosClient.SetVolumeAsync(IpAddress, volume);
         }
 
 
@@ -62,21 +52,9 @@ namespace SonosMotionDetector.Sonos
                 return;
 
             if (fadeMusic)
-            {
-                //Volume is 0-100. Fade into 0.
-                for (int i = await GetVolumeAsync(); i > 0; i--)
-                {
-                    await SetVolumeAsync(i);
-                    await Task.Delay(100);
-                }
-            }
+                await FadeVolumeDownAsync();
 
-            await SonosClient.SendAction(
-                                         IpAddress,
-                                         Endpoints.Control.AvTransport,
-                                         "AVTransport",
-                                         "Pause",
-                                         SoapActionVariables.Pause);
+            await SonosClient.PauseAsync(IpAddress);
 
             IsPlaying = false;
         }
@@ -84,14 +62,27 @@ namespace SonosMotionDetector.Sonos
 
         public async Task<int> GetVolumeAsync()
         {
-            var response = await SonosClient.SendAction(
-                                                         IpAddress,
-                                                         Endpoints.Control.RenderingControl,
-                                                         "RenderingControl",
-                                                         "GetVolume",
-                                                         SoapActionVariables.GetVolume);
+            return await SonosClient.GetVolumeAsync(IpAddress);
+        }
 
-            return int.Parse(response["CurrentVolume"].InnerText);
+
+        private async Task FadeVolumeUpAsync()
+        {
+            for (int i = 0; i < 50; i++)
+            {
+                await SetVolumeAsync(i);
+                await Task.Delay(100);
+            }
+        }
+
+
+        private async Task FadeVolumeDownAsync()
+        {
+            for (int i = await GetVolumeAsync(); i > 0; i--)
+            {
+                await SetVolumeAsync(i);
+                await Task.Delay(100);
+            }
         }
     }
 }
