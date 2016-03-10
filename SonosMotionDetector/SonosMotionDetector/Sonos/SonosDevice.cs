@@ -14,7 +14,7 @@ namespace SonosMotionDetector.Sonos
         public string IpAddress { get; set; }
 
 
-        public bool IsPlaying { get; set; }
+        private bool IsPlaying { get; set; }
 
 
         public int ZoneType { get; set; }
@@ -63,6 +63,19 @@ namespace SonosMotionDetector.Sonos
         public async Task<int> GetVolumeAsync()
         {
             return await SonosClient.GetVolumeAsync(IpAddress);
+        }
+
+
+        public async Task GetCurrentTrackAsync()
+        {
+            await SonosClient.GetPositionInfoAsync(IpAddress);
+        }
+
+
+        public async Task<bool> IsPlayingAsync()
+        {
+            var response = await SonosClient.GetTransportInfoAsync(IpAddress);
+            return response["CurrentTransportState"].InnerText == "PLAYING";
         }
 
 

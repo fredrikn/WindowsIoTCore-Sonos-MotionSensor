@@ -9,5 +9,9 @@
         public static string SetVolume(int volume) => $"<InstanceID>0</InstanceID><Channel>Master</Channel><DesiredVolume>{volume}</DesiredVolume>";
 
         public static string GetVolume => "<InstanceID>0</InstanceID><Channel>Master</Channel>";
+
+        public static string GetPositionInfo => "<InstanceID>0</InstanceID>";
+
+        public static string GetTransportInfo => "<InstanceID>0</InstanceID>";
     }
 }

@@ -14,7 +14,7 @@ namespace SonosMotionDetector.Sonos
             await SendAction(
                              ipAddress,
                              Endpoints.Control.AvTransport,
-                             "AVTransport",
+                             ServiceType.AVTransport,
                              "Play",
                              SoapActionVariables.Play);
         }
@@ -25,7 +25,7 @@ namespace SonosMotionDetector.Sonos
             await SendAction(
                              ipAddress,
                              Endpoints.Control.AvTransport,
-                             "AVTransport",
+                             ServiceType.AVTransport,
                              "Pause",
                              SoapActionVariables.Pause);
         }
@@ -36,7 +36,7 @@ namespace SonosMotionDetector.Sonos
             var response = await SendAction(
                                             ipAddress,
                                             Endpoints.Control.RenderingControl,
-                                            "RenderingControl",
+                                            ServiceType.RenderingControl,
                                             "GetVolume",
                                             SoapActionVariables.GetVolume);
 
@@ -49,9 +49,35 @@ namespace SonosMotionDetector.Sonos
             await SendAction(
                              ipAddress,
                              Endpoints.Control.RenderingControl,
-                             "RenderingControl",
+                             ServiceType.RenderingControl,
                              "SetVolume",
                              SoapActionVariables.SetVolume(volume));
+        }
+
+
+        public static async Task<int> GetPositionInfoAsync(string ipAddress)
+        {
+            var response = await SendAction(
+                                            ipAddress,
+                                            Endpoints.Control.AvTransport,
+                                            ServiceType.AVTransport,
+                                            "GetPositionInfo",
+                                            SoapActionVariables.GetPositionInfo);
+
+            var info = response["TrackMetaData"].InnerText;
+
+            return int.Parse(response["CurrentVolume"].InnerText);
+        }
+
+
+        public static async Task<XmlNode> GetTransportInfoAsync(string ipAddress)
+        {
+            return await SendAction(
+                                    ipAddress,
+                                    Endpoints.Control.AvTransport,
+                                    ServiceType.AVTransport,
+                                    "GetTransportInfo",
+                                    SoapActionVariables.GetTransportInfo);
         }
 
 
@@ -62,37 +88,63 @@ namespace SonosMotionDetector.Sonos
                                                      string action,
                                                      string variables)
         {
-            string xml =
-                 $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:{action} xmlns:u =\"urn:schemas-upnp-org:service:{service}:1\">{variables}</u:{action}>/s:Body></s:Envelope>";
-
             var httpClient = new HttpClient();
 
             httpClient.DefaultRequestHeaders.Add("USER-AGENT", "Linux UPnP/1.0 Sonos/28.1-86200 (WDCR:Microsoft Windows NT 6.2.9200.0)");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, MakeUri(ipAddress, path))
-            {
-                Content = new StringContent(xml, Encoding.UTF8, "text/xml")
-            };
+            var request = CreateHttpRequestMessage(
+                                                   ipAddress,
+                                                   path,
+                                                   service,
+                                                   action,
+                                                   variables);
+
+            var response = await httpClient.SendAsync(request);
+
+            var responseXml = new XmlDocument();
+            responseXml.Load(await response.Content.ReadAsStreamAsync());
+
+            var elements = responseXml.GetElementsByTagName($"{action}Response", $"urn:schemas-upnp-org:service:{service}:1");
+
+            if (elements != null && elements.Count > 0)
+                return elements[0];
+                
+            return null;
+        }
+
+
+        private static HttpRequestMessage CreateHttpRequestMessage(
+                                                                   string ipAddress,
+                                                                   string path,
+                                                                   string service,
+                                                                   string action,
+                                                                   string variables)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, MakeUri(ipAddress, path));
 
             request.Headers.Add("SOAPACTION", $"\"urn:schemas-upnp-org:service:{service}:1#{action}\"");
 
             request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 
-            var response = await httpClient.SendAsync(request);
+            string xml = CreateUpnpSoapEnvelope(service, action, variables);
+            request.Content = new StringContent(xml, Encoding.UTF8, "text/xml");
 
-            if (response.Content != null)
-            {
-                var responseXml = new XmlDocument();
+            return request;
+        }
 
-                responseXml.Load(await response?.Content.ReadAsStreamAsync());
 
-                var elements = responseXml.GetElementsByTagName($"{action}Response", $"urn:schemas-upnp-org:service:{service}:1");
-
-                if (elements != null && elements.Count > 0)
-                    return elements[0];
-            }
-
-            return null;
+        private static string CreateUpnpSoapEnvelope(
+                                                     string service,
+                                                     string action,
+                                                     string variables)
+        {
+            return "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                 "  <s:Body>" +
+                 $"      <u:{action} xmlns:u=\"urn:schemas-upnp-org:service:{service}:1\">" +
+                 $"          {variables}" +
+                 $"      </u:{action}>" +
+                 "  </s:Body>" +
+                 "</s:Envelope>";
         }
 
 

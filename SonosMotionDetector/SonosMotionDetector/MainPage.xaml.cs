@@ -21,24 +21,31 @@ using Windows.UI.Xaml.Navigation;
 
 namespace SonosMotionDetector
 {
+    using System.Threading.Tasks;
+
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
     public sealed partial class MainPage : Page
     {
         GpioPin _pin11;
-        GpioController _gpio;
+
+        readonly GpioController _gpio;
 
         IEnumerable<SonosDevice> _sonosDevices;
 
         SonosDevice _selectedSonosDevice = null;
 
-        DispatcherTimer _idleTimer = new DispatcherTimer();
+        readonly DispatcherTimer _idleTimer = new DispatcherTimer();
+
+        private object _lock = new object();
 
         public MainPage()
         {
             this.InitializeComponent();
             _gpio = GpioController.GetDefault();
+
+            //_selectedSonosDevice = new SonosDevice() { IpAddress = "192.168.1.159" };
         }
 
 
@@ -73,7 +80,7 @@ namespace SonosMotionDetector
 
         private void DevicesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            _selectedSonosDevice = _sonosDevices.Where((device) => device.RoomName == DevicesList.SelectedItem as string).FirstOrDefault();
+            _selectedSonosDevice = _sonosDevices.FirstOrDefault(device => device.RoomName == DevicesList.SelectedItem as string);
 
             if (_selectedSonosDevice != null)
                 StartButton.IsEnabled = true;
@@ -99,17 +106,39 @@ namespace SonosMotionDetector
             await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
                 async () =>
                 {
+                    _pin11.ValueChanged -= Pin_ValueChanged;
+
                     IndicationStatus.Text = args.Edge == GpioPinEdge.RisingEdge ? "DETECTION" : "NOTHING THERE";
 
-                    if (args.Edge == GpioPinEdge.RisingEdge)
+                    var currentPlayingDevice = await GetFirstPlayingDeviceAsync();
+
+                    if (currentPlayingDevice != null)
                     {
-                        _idleTimer.Stop();
+                        if (args.Edge == GpioPinEdge.RisingEdge)
+                        {
+                            _idleTimer.Stop();
 
-                        await _selectedSonosDevice.PlayAsync();
+                            await _selectedSonosDevice.PlayAsync();
 
-                        _idleTimer.Start();
+                            _idleTimer.Start();
+                        }
                     }
+
+                    _pin11.ValueChanged += Pin_ValueChanged;
                 });
+
+        }
+
+    
+        private async Task<SonosDevice> GetFirstPlayingDeviceAsync()
+        {
+            foreach (var device in _sonosDevices)
+            {
+                if (await device.IsPlayingAsync())
+                    return device;
+            }
+
+            return null;
         }
 
 
@@ -122,7 +151,7 @@ namespace SonosMotionDetector
 
         private void IdleTimeSettings_LostFocus(object sender, RoutedEventArgs e)
         {
-            Regex regex = new Regex("[^0-9]+");
+            var regex = new Regex("[^0-9]+");
             IdleTimeSettings.Text = !regex.IsMatch(IdleTimeSettings.Text) ? IdleTimeSettings.Text : "30";
         }
     }
