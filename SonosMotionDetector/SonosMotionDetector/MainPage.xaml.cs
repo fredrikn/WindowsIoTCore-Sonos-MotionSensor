@@ -118,7 +118,7 @@ namespace SonosMotionDetector
                         {
                             _idleTimer.Stop();
 
-                            await _selectedSonosDevice.PlayAsync();
+                            await _selectedSonosDevice.PlayAsync(await currentPlayingDevice.GetVolumeAsync());
 
                             _idleTimer.Start();
                         }

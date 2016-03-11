@@ -20,7 +20,9 @@ namespace SonosMotionDetector.Sonos
         public int ZoneType { get; set; }
 
 
-        public async Task PlayAsync(bool fadeMusic = true)
+        public async Task PlayAsync(
+                                    int setVolume = 30,
+                                    bool fadeMusic = true)
         {
             if (IsPlaying)
                 return;
@@ -31,7 +33,7 @@ namespace SonosMotionDetector.Sonos
             await SonosClient.PlayAsync(IpAddress);
 
             if (fadeMusic)
-                await FadeVolumeUpAsync();
+                await FadeVolumeUpAsync(setVolume);
 
             IsPlaying = true;
         }
@@ -75,13 +77,16 @@ namespace SonosMotionDetector.Sonos
         public async Task<bool> IsPlayingAsync()
         {
             var response = await SonosClient.GetTransportInfoAsync(IpAddress);
-            return response["CurrentTransportState"].InnerText == "PLAYING";
+
+            IsPlaying = response["CurrentTransportState"].InnerText == "PLAYING";
+
+            return IsPlaying;
         }
 
 
-        private async Task FadeVolumeUpAsync()
+        private async Task FadeVolumeUpAsync(int volume)
         {
-            for (int i = 0; i < 50; i++)
+            for (var i = 0; i < volume; i++)
             {
                 await SetVolumeAsync(i);
                 await Task.Delay(100);

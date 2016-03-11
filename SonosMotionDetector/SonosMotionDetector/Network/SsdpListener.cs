@@ -14,7 +14,7 @@ namespace SonosMotionDetector.Network
         public async Task<IEnumerable<NetworkService>> DiscoverAsync(TimeSpan timeout, string stFilter = "ssdp:all")
         {
             if (timeout <= TimeSpan.Zero)
-                throw new ArgumentException("Timeout value must be greater than zero.", "timeout");
+                throw new ArgumentException("Timeout value must be greater than zero.", nameof(timeout));
 
             var discoveredBridges = new List<NetworkService>();
             var multicastIP = new HostName("239.255.255.250");

@@ -33,10 +33,16 @@ namespace SonosMotionDetector.Sonos
                 var doc = new XmlDocument();
                 doc.Load(await httpClient.GetStreamAsync(discoveredSonosDevice.Headers["LOCATION"]));
 
-                sonosDevices.Add(CreateSonosDevice(discoveredSonosDevice, doc));
+                if (IsNotBridge(doc))
+                    sonosDevices.Add(CreateSonosDevice(discoveredSonosDevice, doc));
             }
 
             return sonosDevices;
+        }
+
+        private static bool IsNotBridge(XmlDocument doc)
+        {
+            return int.Parse(GetValueFromElement(doc, "zoneType")) != 4;
         }
 
 
