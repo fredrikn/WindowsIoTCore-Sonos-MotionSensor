@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.RegularExpressions;
+using System.Xml;
 using Windows.Devices.Gpio;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -126,24 +127,70 @@ namespace SonosMotionDetector
             if (await _selectedSonosDevice.IsPlayingAsync())
                 return;
 
+            //TODO: Make sure if more than one player is playing and the music is different, don't play anything.
             var currentPlayingDevice = await GetFirstPlayingDeviceAsync();
 
-            //TODO: Make sure if more than one player is playing and the music is different, don't play anything.
-
-            if (currentPlayingDevice != null)
+            if (currentPlayingDevice != null && currentPlayingDevice.IpAddress != _selectedSonosDevice.IpAddress)
             {
                 var currentlyPlayingResponse = await currentPlayingDevice.GetPlayingInfoAsync();
 
                 var currentTrackUri = currentlyPlayingResponse["TrackURI"].InnerText;
-                var currentTrackMedatada = ""; //currentlyPlayingResponse["TrackMetaData"].InnerText;
 
-                await _selectedSonosDevice.PlayAsync(
-                                                    trackUri: currentTrackUri,
-                                                    trackMetadata: currentTrackMedatada,
-                                                    setVolume: await currentPlayingDevice.GetVolumeAsync());
+                if (IsRadioPlaying(currentTrackUri))
+                {
+                    await PlayRadioChannel(currentTrackUri, await currentPlayingDevice.GetVolumeAsync());
+                }
+                else
+                {
+                    await AddCurrentPlayingDeviceQueueToSonosDevice(
+                                                                    currentPlayingDevice,
+                                                                    _selectedSonosDevice,
+                                                                    int.Parse(currentlyPlayingResponse["Track"].InnerText)-1);
+
+                    await _selectedSonosDevice.SetVolumeAsync(0);
+                    await _selectedSonosDevice.PlayAsync();
+                    //TDOD: Parse time to second, add a timer to sync the time closer.
+                    await ForwardMusicToCurrentPlyaingTime(currentPlayingDevice);
+                    await FadeVolumeUpAsync(await currentPlayingDevice.GetVolumeAsync());
+                }
             }
 
             _idleTimer.Start();
+        }
+
+
+        private async Task ForwardMusicToCurrentPlyaingTime(SonosDevice currentPlayingDevice)
+        {
+            var currentlyPlayingStatus = await currentPlayingDevice.GetPlayingInfoAsync();
+            await _selectedSonosDevice.ForwardToTimeAsync(currentlyPlayingStatus["RelTime"].InnerText);
+        }
+
+
+        private static async Task AddCurrentPlayingDeviceQueueToSonosDevice(
+                                                                            SonosDevice currentPlayingDevice,
+                                                                            SonosDevice selectedDevice,
+                                                                            int startIndex)
+        {
+            var queue = await currentPlayingDevice.GetQueueAsync(startIndex, requestCount: 10);
+
+            await selectedDevice.ClearQueueAsync();
+
+            foreach (XmlNode childNode in queue.ChildNodes)
+                await selectedDevice.AddUriToQueueAsync(childNode["res"].InnerXml);
+        }
+
+
+        private async Task PlayRadioChannel(string currentTrackUri, int volume)
+        {
+            await _selectedSonosDevice.SetVolumeAsync(0);
+            await _selectedSonosDevice.PlayRadioAsync(currentTrackUri);
+            await FadeVolumeUpAsync(volume);
+        }
+
+
+        private static bool IsRadioPlaying(string currentTrackUri)
+        {
+            return currentTrackUri.Contains("radio");
         }
 
 
@@ -162,6 +209,7 @@ namespace SonosMotionDetector
         private async void _idleTimer_Tick(object sender, object e)
         {
             _idleTimer.Stop();
+            await FadeVolumeDownAsync();
             await _selectedSonosDevice.PauseAsync();
         }
 
@@ -170,6 +218,25 @@ namespace SonosMotionDetector
         {
             var regex = new Regex("[^0-9]+");
             IdleTimeSettings.Text = !regex.IsMatch(IdleTimeSettings.Text) ? IdleTimeSettings.Text : "30";
+        }
+
+
+        private async Task FadeVolumeUpAsync(int volume)
+        {
+            for (var i = 0; i < volume; i++)
+            {
+                await _selectedSonosDevice.SetVolumeAsync(i);
+                await Task.Delay(100);
+            }
+        }
+
+        private async Task FadeVolumeDownAsync()
+        {
+            for (var i = await _selectedSonosDevice.GetVolumeAsync(); i > 0; i--)
+            {
+                await _selectedSonosDevice.SetVolumeAsync(i);
+                await Task.Delay(100);
+            }
         }
     }
 }

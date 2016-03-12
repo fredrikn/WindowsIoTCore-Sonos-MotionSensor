@@ -8,6 +8,8 @@
             public static string RenderingControl => "/MediaRenderer/RenderingControl/Control";
 
             public static string AvTransport => "/MediaRenderer/AVTransport/Control";
+
+            public static string ContentDirectory => "/MediaServer/ContentDirectory/Control";
         }
     }
 }

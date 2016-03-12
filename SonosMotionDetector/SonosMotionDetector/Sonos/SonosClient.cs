@@ -76,7 +76,7 @@ namespace SonosMotionDetector.Sonos
                                     SoapActionVariables.GetTransportInfo);
         }
 
-        public static async Task SetAVTransportURIAsync(
+        public static async Task SetAvTransportUriAsync(
                                                         string ipAddress,
                                                         string trackUri,
                                                         string trackMetaData)
@@ -87,6 +87,60 @@ namespace SonosMotionDetector.Sonos
                              ServiceType.AVTransport,
                              "SetAVTransportURI",
                              SoapActionVariables.SetAVTransportURI(trackUri, trackMetaData));
+        }
+
+
+        public static async Task<XmlNode> GetQueueAsync(
+                                                string ipAddress,
+                                                int startIndex = 0,
+                                                int count = 500)
+        {
+            var result = await SendAction(
+                                    ipAddress,
+                                    Endpoints.Control.ContentDirectory,
+                                    ServiceType.ContentDirectory,
+                                    "Browse",
+                                    SoapActionVariables.Browse("Q:0", startIndex, count));
+
+            var doc = new XmlDocument();
+            doc.LoadXml(result["Result"].InnerText);
+
+            return doc.FirstChild;
+        }
+
+
+        public static async Task AddUriToQueueAsync(
+                                               string ipAddress,
+                                               string trackUri,
+                                               string trackMetadata = "")
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             ServiceType.AVTransport,
+                             "AddURIToQueue",
+                             SoapActionVariables.AddUriToQueue(trackUri, trackMetadata, 0, 1));
+        }
+
+        public static async Task ClearQueueAsync(string ipAddress)
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             ServiceType.AVTransport,
+                             "RemoveAllTracksFromQueue",
+                             SoapActionVariables.RemoveAllTracksFromQueue);
+        }
+
+
+        public static async Task TrackSeekAsync(string ipAddress, string forwardTotime)
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             ServiceType.AVTransport,
+                             "Seek",
+                             SoapActionVariables.Seek("REL_TIME", forwardTotime));
         }
 
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
+using Windows.Devices.AllJoyn;
 
 namespace SonosMotionDetector.Sonos
 {
@@ -21,27 +22,45 @@ namespace SonosMotionDetector.Sonos
         public int ZoneType { get; set; }
 
 
-        public async Task PlayAsync(
-                                    string trackUri = "",
-                                    string trackMetadata = "",
-                                    int setVolume = 0,
-                                    bool fadeMusic = true)
+        public async Task PlayAsync()
         {
             if (IsPlaying)
                 return;
 
-            if (fadeMusic)
-                await SetVolumeAsync(0);
-
-            if (!string.IsNullOrWhiteSpace(trackUri))
-                await SonosClient.SetAVTransportURIAsync(IpAddress, trackUri, trackMetadata);
-
             await SonosClient.PlayAsync(IpAddress);
 
-            if (fadeMusic)
-                await FadeVolumeUpAsync(setVolume == 0 ? await GetVolumeAsync() : setVolume);
-
             IsPlaying = true;
+        }
+
+
+
+        public async Task PlayRadioAsync(string currentTrackUri)
+        {
+            await SonosClient.SetAvTransportUriAsync(IpAddress, currentTrackUri, "");
+        }
+
+
+        public async Task<XmlNode> GetQueueAsync(int startIndex = 0, int requestCount = 500)
+        {
+            return await SonosClient.GetQueueAsync(IpAddress, startIndex, requestCount);
+        }
+
+
+        public async Task AddUriToQueueAsync(string trackUri, string trackMetadata = "")
+        {
+            await SonosClient.AddUriToQueueAsync(IpAddress, trackUri, trackMetadata);
+        }
+
+
+        public async Task ForwardToTimeAsync(string time)
+        {
+            await SonosClient.TrackSeekAsync(IpAddress, time);
+        }
+
+
+        public async Task ClearQueueAsync()
+        {
+            await SonosClient.ClearQueueAsync(IpAddress);
         }
 
 
@@ -54,13 +73,10 @@ namespace SonosMotionDetector.Sonos
         }
 
 
-        public async Task PauseAsync(bool fadeMusic = true)
+        public async Task PauseAsync()
         {
             if (!IsPlaying)
                 return;
-
-            if (fadeMusic)
-                await FadeVolumeDownAsync();
 
             await SonosClient.PauseAsync(IpAddress);
 
@@ -87,26 +103,6 @@ namespace SonosMotionDetector.Sonos
         public async Task<XmlNode> GetPlayingInfoAsync()
         {
             return await SonosClient.GetPositionInfoAsync(IpAddress);
-        }
-
-
-        private async Task FadeVolumeUpAsync(int volume)
-        {
-            for (var i = 0; i < volume; i++)
-            {
-                await SetVolumeAsync(i);
-                await Task.Delay(100);
-            }
-        }
-
-
-        private async Task FadeVolumeDownAsync()
-        {
-            for (var i = await GetVolumeAsync(); i > 0; i--)
-            {
-                await SetVolumeAsync(i);
-                await Task.Delay(100);
-            }
         }
     }
 }

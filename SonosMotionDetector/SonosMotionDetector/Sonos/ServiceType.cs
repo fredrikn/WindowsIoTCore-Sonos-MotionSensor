@@ -11,5 +11,7 @@ namespace SonosMotionDetector.Sonos
         public static string AVTransport => "AVTransport";
 
         public static string RenderingControl => "RenderingControl";
+
+        public static string ContentDirectory => "ContentDirectory";
     }
 }
