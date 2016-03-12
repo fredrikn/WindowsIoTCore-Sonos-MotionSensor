@@ -110,26 +110,43 @@ namespace SonosMotionDetector
 
                     IndicationStatus.Text = args.Edge == GpioPinEdge.RisingEdge ? "DETECTION" : "NOTHING THERE";
 
-                    var currentPlayingDevice = await GetFirstPlayingDeviceAsync();
-
-                    if (currentPlayingDevice != null)
-                    {
-                        if (args.Edge == GpioPinEdge.RisingEdge)
-                        {
-                            _idleTimer.Stop();
-
-                            await _selectedSonosDevice.PlayAsync(await currentPlayingDevice.GetVolumeAsync());
-
-                            _idleTimer.Start();
-                        }
-                    }
+                    if (args.Edge == GpioPinEdge.RisingEdge)
+                        await PlayDevice();
 
                     _pin11.ValueChanged += Pin_ValueChanged;
-                });
 
+                });
         }
 
-    
+
+        private async Task PlayDevice()
+        {
+            _idleTimer.Stop();
+
+            if (await _selectedSonosDevice.IsPlayingAsync())
+                return;
+
+            var currentPlayingDevice = await GetFirstPlayingDeviceAsync();
+
+            //TODO: Make sure if more than one player is playing and the music is different, don't play anything.
+
+            if (currentPlayingDevice != null)
+            {
+                var currentlyPlayingResponse = await currentPlayingDevice.GetPlayingInfoAsync();
+
+                var currentTrackUri = currentlyPlayingResponse["TrackURI"].InnerText;
+                var currentTrackMedatada = ""; //currentlyPlayingResponse["TrackMetaData"].InnerText;
+
+                await _selectedSonosDevice.PlayAsync(
+                                                    trackUri: currentTrackUri,
+                                                    trackMetadata: currentTrackMedatada,
+                                                    setVolume: await currentPlayingDevice.GetVolumeAsync());
+            }
+
+            _idleTimer.Start();
+        }
+
+
         private async Task<SonosDevice> GetFirstPlayingDeviceAsync()
         {
             foreach (var device in _sonosDevices)

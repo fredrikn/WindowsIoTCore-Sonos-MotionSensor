@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace SonosMotionDetector.Sonos
 {
@@ -21,7 +22,9 @@ namespace SonosMotionDetector.Sonos
 
 
         public async Task PlayAsync(
-                                    int setVolume = 30,
+                                    string trackUri = "",
+                                    string trackMetadata = "",
+                                    int setVolume = 0,
                                     bool fadeMusic = true)
         {
             if (IsPlaying)
@@ -30,10 +33,13 @@ namespace SonosMotionDetector.Sonos
             if (fadeMusic)
                 await SetVolumeAsync(0);
 
+            if (!string.IsNullOrWhiteSpace(trackUri))
+                await SonosClient.SetAVTransportURIAsync(IpAddress, trackUri, trackMetadata);
+
             await SonosClient.PlayAsync(IpAddress);
 
             if (fadeMusic)
-                await FadeVolumeUpAsync(setVolume);
+                await FadeVolumeUpAsync(setVolume == 0 ? await GetVolumeAsync() : setVolume);
 
             IsPlaying = true;
         }
@@ -68,12 +74,6 @@ namespace SonosMotionDetector.Sonos
         }
 
 
-        public async Task GetCurrentTrackAsync()
-        {
-            await SonosClient.GetPositionInfoAsync(IpAddress);
-        }
-
-
         public async Task<bool> IsPlayingAsync()
         {
             var response = await SonosClient.GetTransportInfoAsync(IpAddress);
@@ -81,6 +81,12 @@ namespace SonosMotionDetector.Sonos
             IsPlaying = response["CurrentTransportState"].InnerText == "PLAYING";
 
             return IsPlaying;
+        }
+
+
+        public async Task<XmlNode> GetPlayingInfoAsync()
+        {
+            return await SonosClient.GetPositionInfoAsync(IpAddress);
         }
 
 
@@ -96,7 +102,7 @@ namespace SonosMotionDetector.Sonos
 
         private async Task FadeVolumeDownAsync()
         {
-            for (int i = await GetVolumeAsync(); i > 0; i--)
+            for (var i = await GetVolumeAsync(); i > 0; i--)
             {
                 await SetVolumeAsync(i);
                 await Task.Delay(100);

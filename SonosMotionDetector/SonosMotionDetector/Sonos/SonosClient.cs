@@ -55,18 +55,14 @@ namespace SonosMotionDetector.Sonos
         }
 
 
-        public static async Task<int> GetPositionInfoAsync(string ipAddress)
+        public static async Task<XmlNode> GetPositionInfoAsync(string ipAddress)
         {
-            var response = await SendAction(
-                                            ipAddress,
-                                            Endpoints.Control.AvTransport,
-                                            ServiceType.AVTransport,
-                                            "GetPositionInfo",
-                                            SoapActionVariables.GetPositionInfo);
-
-            var info = response["TrackMetaData"].InnerText;
-
-            return int.Parse(response["CurrentVolume"].InnerText);
+            return await SendAction(
+                                    ipAddress,
+                                    Endpoints.Control.AvTransport,
+                                    ServiceType.AVTransport,
+                                    "GetPositionInfo",
+                                    SoapActionVariables.GetPositionInfo);
         }
 
 
@@ -78,6 +74,19 @@ namespace SonosMotionDetector.Sonos
                                     ServiceType.AVTransport,
                                     "GetTransportInfo",
                                     SoapActionVariables.GetTransportInfo);
+        }
+
+        public static async Task SetAVTransportURIAsync(
+                                                        string ipAddress,
+                                                        string trackUri,
+                                                        string trackMetaData)
+        {
+            await SendAction(
+                             ipAddress,
+                             Endpoints.Control.AvTransport,
+                             ServiceType.AVTransport,
+                             "SetAVTransportURI",
+                             SoapActionVariables.SetAVTransportURI(trackUri, trackMetaData));
         }
 
 

@@ -13,5 +13,8 @@
         public static string GetPositionInfo => "<InstanceID>0</InstanceID>";
 
         public static string GetTransportInfo => "<InstanceID>0</InstanceID>";
+
+        public static string SetAVTransportURI(string trackUri, string trackMetaData)
+            => $"<InstanceID>0</InstanceID><CurrentURI>{trackUri}</CurrentURI><CurrentURIMetaData>{trackMetaData}</CurrentURIMetaData>";
     }
 }
